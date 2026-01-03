@@ -192,6 +192,43 @@ else
     echo "To install manually: npx @anthropic-ai/claude-code mcp add obs-mcp -- npx -y obs-mcp"
 fi
 
+# Permission check functions
+check_accessibility_permission() {
+    local app_id="$1"
+    # Check system TCC database for accessibility permission
+    # auth_value=2 means granted, auth_value=0 means denied
+    local result=$(sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" \
+        "SELECT auth_value FROM access WHERE service='kTCCServiceAccessibility' AND client='$app_id';" 2>/dev/null)
+    [ "$result" = "2" ]
+}
+
+check_camera_permission() {
+    local app_id="$1"
+    # Check user TCC database for camera permission
+    local result=$(sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" \
+        "SELECT auth_value FROM access WHERE service='kTCCServiceCamera' AND client='$app_id';" 2>/dev/null)
+    [ "$result" = "2" ]
+}
+
+check_system_extension() {
+    # Check if OBS Virtual Camera extension is enabled
+    # This checks if the system extension is loaded
+    systemextensionsctl list 2>/dev/null | grep -q "com.obsproject.obs-studio" && \
+    systemextensionsctl list 2>/dev/null | grep "com.obsproject.obs-studio" | grep -q "enabled"
+}
+
+prompt_permission() {
+    local title="$1"
+    local message="$2"
+    local settings_url="$3"
+
+    # Open the relevant System Settings pane
+    open "$settings_url"
+
+    # Show dialog to guide user
+    osascript -e "display dialog \"$message\" with title \"$title\" buttons {\"Done\"} default button \"Done\""
+}
+
 # Restart Hammerspoon
 echo "Restarting Hammerspoon..."
 killall Hammerspoon 2>/dev/null || true
@@ -199,19 +236,48 @@ sleep 1
 open -a Hammerspoon
 
 echo
+echo "=== Checking Permissions ==="
+echo
+
+# Check and prompt for Hammerspoon Accessibility
+if ! check_accessibility_permission "org.hammerspoon.Hammerspoon"; then
+    echo "Hammerspoon needs Accessibility permission..."
+    prompt_permission "Accessibility Permission Required" \
+        "Please enable Hammerspoon in the Accessibility list.\n\n1. Click the + button\n2. Find and select Hammerspoon\n3. Enable the checkbox\n\nClick Done when complete." \
+        "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+else
+    echo "✓ Hammerspoon already has Accessibility permission"
+fi
+
+# Check and prompt for OBS Camera
+if ! check_camera_permission "com.obsproject.obs-studio"; then
+    echo "OBS needs Camera permission..."
+    prompt_permission "Camera Permission Required" \
+        "Please enable OBS in the Camera list.\n\n1. Find OBS in the list\n2. Enable the checkbox\n\nIf OBS is not listed, open OBS once and it will request permission.\n\nClick Done when complete." \
+        "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera"
+else
+    echo "✓ OBS already has Camera permission"
+fi
+
+# Check and prompt for OBS Virtual Camera extension
+if ! check_system_extension; then
+    echo "OBS Virtual Camera extension needs to be enabled..."
+    prompt_permission "Camera Extension Required" \
+        "Please enable the OBS Virtual Camera extension.\n\n1. Scroll down to 'Camera Extensions'\n2. Enable 'OBS Virtual Camera'\n\nIf not listed, open OBS and click 'Start Virtual Camera' first.\n\nClick Done when complete." \
+        "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Login%20Items"
+else
+    echo "✓ OBS Virtual Camera extension already enabled"
+fi
+
+echo
 echo "=== Installation Complete ==="
 echo
 echo "Next steps:"
-echo "1. Grant permissions in System Settings:"
-echo "   - Privacy & Security → Accessibility → Enable Hammerspoon"
-echo "   - Privacy & Security → Camera → Enable OBS"
-echo "   - General → Login Items → Camera Extensions → Enable OBS"
-echo
-echo "2. Open OBS and click 'Start Virtual Camera' (bottom right)"
+echo "1. Open OBS and click 'Start Virtual Camera' (bottom right)"
 echo "   - A scene with your default camera is already configured"
 echo
-echo "3. In Zoom/Meet, select 'OBS Virtual Camera' as your camera"
+echo "2. In Zoom/Meet, select 'OBS Virtual Camera' as your camera"
 echo
-echo "4. Press Cmd+Shift+F to freeze/unfreeze!"
+echo "3. Press Cmd+Shift+F to freeze/unfreeze!"
 echo
 echo "WebSocket Password: $OBS_WS_PASSWORD"
