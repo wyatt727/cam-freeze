@@ -163,7 +163,7 @@ EOF
 
 # Install OBS MCP server for Claude Code
 if command -v npx &> /dev/null; then
-    echo "Installing OBS MCP server for Claude Code..."
+    echo -e "${BLUE}▶${NC} Installing OBS MCP server for Claude Code..."
 
     # Configure Claude settings with MCP server
     CLAUDE_SETTINGS="$HOME/.claude/settings.json"
@@ -192,9 +192,8 @@ settings['mcpServers']['obs-mcp'] = {
 
 with open(settings_path, 'w') as f:
     json.dump(settings, f, indent=2)
-
-print("Claude MCP settings updated with OBS server")
 PYEOF
+        echo -e "${GREEN}✓${NC} Claude MCP settings updated"
     else
         # Create new settings
         cat > "$CLAUDE_SETTINGS" << JSONEOF
@@ -210,11 +209,10 @@ PYEOF
   }
 }
 JSONEOF
-        echo "Created Claude settings with OBS MCP server"
+        echo -e "${GREEN}✓${NC} Created Claude MCP settings"
     fi
 else
-    echo "npx not found - skipping Claude MCP installation"
-    echo "To install manually: npx @anthropic-ai/claude-code mcp add obs-mcp -- npx -y obs-mcp"
+    echo -e "${DIM}  Skipping Claude MCP (npx not found)${NC}"
 fi
 
 # Restart Hammerspoon
