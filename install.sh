@@ -195,6 +195,7 @@ fi
 # Permission check functions
 check_accessibility_permission() {
     # Use Hammerspoon's own CLI to check accessibility state
+    # Requires IPC module to be loaded (added to config)
     local hs_cli="/Applications/Hammerspoon.app/Contents/Frameworks/hs/hs"
     if [ -x "$hs_cli" ]; then
         local result=$("$hs_cli" -c "hs.accessibilityState()" 2>/dev/null)
@@ -206,10 +207,9 @@ check_accessibility_permission() {
 
 check_camera_permission() {
     # Camera permissions can't be reliably checked without Full Disk Access
-    # Check if OBS has been launched before (creates preferences on first run)
-    # If prefs exist, OBS has run and would have prompted for camera
-    [ -d "$HOME/Library/Application Support/obs-studio" ] && \
-    [ -f "$HOME/Library/Preferences/com.obsproject.obs-studio.plist" ]
+    # Check if OBS config exists - if so, OBS has run and would have prompted for camera
+    # This is a heuristic; if user denied, they'll need to manually enable anyway
+    [ -d "$HOME/Library/Application Support/obs-studio/basic" ]
 }
 
 check_system_extension() {
@@ -229,11 +229,13 @@ prompt_permission() {
     osascript -e "display dialog \"$message\" with title \"$title\" buttons {\"Done\"} default button \"Done\""
 }
 
-# Restart Hammerspoon
+# Restart Hammerspoon (with IPC module for CLI access)
 echo "Restarting Hammerspoon..."
 killall Hammerspoon 2>/dev/null || true
 sleep 1
 open -a Hammerspoon
+# Wait for Hammerspoon to fully start and load IPC module
+sleep 2
 
 echo
 echo "=== Checking Permissions ==="
