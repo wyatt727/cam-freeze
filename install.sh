@@ -36,42 +36,42 @@ echo
 
 # Check for Homebrew
 if ! command -v brew &> /dev/null; then
-    echo "Installing Homebrew..."
+    echo -e "${BLUE}▶${NC} Installing Homebrew..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
 
 # Install OBS
 if ! [ -d "/Applications/OBS.app" ] && ! command -v obs &> /dev/null; then
-    echo "Installing OBS Studio..."
+    echo -e "${BLUE}▶${NC} Installing OBS Studio..."
     brew install --cask obs
 else
-    echo "OBS Studio already installed"
+    echo -e "${GREEN}✓${NC} OBS Studio already installed"
 fi
 
 # Install Hammerspoon
 if ! [ -d "/Applications/Hammerspoon.app" ]; then
-    echo "Installing Hammerspoon..."
+    echo -e "${BLUE}▶${NC} Installing Hammerspoon..."
     brew install --cask hammerspoon
 else
-    echo "Hammerspoon already installed"
+    echo -e "${GREEN}✓${NC} Hammerspoon already installed"
 fi
 
 # Install Python websockets
-echo "Installing Python websockets..."
-pip3 install --user websockets -q 2>/dev/null || pip3 install websockets --break-system-packages -q 2>/dev/null || echo "websockets may already be installed"
+echo -e "${BLUE}▶${NC} Installing Python websockets..."
+pip3 install --user websockets -q 2>/dev/null || pip3 install websockets --break-system-packages -q 2>/dev/null || true
 
 # Copy cam-freeze script
-echo "Installing cam-freeze script..."
+echo -e "${BLUE}▶${NC} Installing cam-freeze script..."
 sudo cp "$SCRIPT_DIR/cam-freeze" /usr/local/bin/cam-freeze
 sudo chmod 755 /usr/local/bin/cam-freeze
 
 # Set up Hammerspoon config
-echo "Setting up Hammerspoon config..."
+echo -e "${BLUE}▶${NC} Setting up Hammerspoon config..."
 mkdir -p ~/.hammerspoon
 cp "$SCRIPT_DIR/hammerspoon-config.lua" ~/.hammerspoon/init.lua
 
 # Configure OBS WebSocket
-echo "Configuring OBS WebSocket..."
+echo -e "${BLUE}▶${NC} Configuring OBS WebSocket..."
 OBS_WS_CONFIG_DIR="$HOME/Library/Application Support/obs-studio/plugin_config/obs-websocket"
 mkdir -p "$OBS_WS_CONFIG_DIR"
 
