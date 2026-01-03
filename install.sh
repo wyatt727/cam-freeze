@@ -218,17 +218,20 @@ if [ "$GUIDED_MODE" = "true" ]; then
     # Hammerspoon Accessibility
     echo "Step 1/3: Hammerspoon Accessibility"
     open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-    osascript -e 'display dialog "Please enable Hammerspoon in the Accessibility list.\n\n1. Click the + button (if Hammerspoon not listed)\n2. Find and select Hammerspoon\n3. Enable the checkbox\n\nClick Done when complete." with title "Accessibility Permission" buttons {"Done"} default button "Done"'
+    sleep 1
+    osascript -e 'display dialog "Enable Hammerspoon in the Accessibility list.\n\n1. Click the + button (if Hammerspoon not listed)\n2. Find and select Hammerspoon\n3. Enable the checkbox\n\n(If in fullscreen, switch to System Settings)\n\nClick Done when complete." with title "Step 1/3: Accessibility" buttons {"Done"} default button "Done"'
 
     # OBS Camera
     echo "Step 2/3: OBS Camera Permission"
     open "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera"
-    osascript -e 'display dialog "Please enable OBS in the Camera list.\n\n1. Find OBS in the list\n2. Enable the checkbox\n\nIf OBS is not listed, open OBS once first - it will request permission.\n\nClick Done when complete." with title "Camera Permission" buttons {"Done"} default button "Done"'
+    sleep 1
+    osascript -e 'display dialog "Enable OBS in the Camera list.\n\n1. Find OBS in the list\n2. Enable the checkbox\n\nIf OBS is not listed, open OBS once first.\n\n(If in fullscreen, switch to System Settings)\n\nClick Done when complete." with title "Step 2/3: Camera" buttons {"Done"} default button "Done"'
 
     # OBS Virtual Camera Extension
     echo "Step 3/3: OBS Virtual Camera Extension"
     open "x-apple.systempreferences:com.apple.LoginItems-Settings.extension"
-    osascript -e 'display dialog "Please enable the OBS Virtual Camera extension.\n\n1. Scroll down to \"Camera Extensions\" at the bottom\n2. Enable \"OBS Virtual Camera\"\n\nIf not listed, open OBS and click \"Start Virtual Camera\" first.\n\nClick Done when complete." with title "Camera Extension" buttons {"Done"} default button "Done"'
+    sleep 1
+    osascript -e 'display dialog "Enable the OBS Virtual Camera extension.\n\n1. Scroll down to \"Camera Extensions\"\n2. Enable \"OBS Virtual Camera\"\n\nIf not listed, open OBS and click \"Start Virtual Camera\" first.\n\n(If in fullscreen, switch to System Settings)\n\nClick Done when complete." with title "Step 3/3: Camera Extension" buttons {"Done"} default button "Done"'
 
     echo "✓ Guided setup complete"
 fi
