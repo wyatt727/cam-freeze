@@ -227,8 +227,8 @@ if [ "$GUIDED_MODE" = "true" ]; then
 
     # OBS Virtual Camera Extension
     echo "Step 3/3: OBS Virtual Camera Extension"
-    open "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Login%20Items"
-    osascript -e 'display dialog "Please enable the OBS Virtual Camera extension.\n\n1. Scroll down to \"Camera Extensions\"\n2. Enable \"OBS Virtual Camera\"\n\nIf not listed, open OBS and click \"Start Virtual Camera\" first.\n\nClick Done when complete." with title "Camera Extension" buttons {"Done"} default button "Done"'
+    open "x-apple.systempreferences:com.apple.LoginItems-Settings.extension"
+    osascript -e 'display dialog "Please enable the OBS Virtual Camera extension.\n\n1. Scroll down to \"Camera Extensions\" at the bottom\n2. Enable \"OBS Virtual Camera\"\n\nIf not listed, open OBS and click \"Start Virtual Camera\" first.\n\nClick Done when complete." with title "Camera Extension" buttons {"Done"} default button "Done"'
 
     echo "✓ Guided setup complete"
 fi
