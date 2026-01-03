@@ -2,6 +2,10 @@
 -- OBS Camera Freeze Toggle (Cmd+Shift+F)
 -- Toggles between live camera and frozen frame for Zoom calls
 --------------------------------------------------
+
+-- Enable IPC for CLI access (used by install script to check accessibility)
+require("hs.ipc")
+
 local frozenIndicator = nil
 local camFrozen = false
 
