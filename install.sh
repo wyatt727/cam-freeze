@@ -91,16 +91,16 @@ OBS_SCENES_DIR="$HOME/Library/Application Support/obs-studio/basic/scenes"
 mkdir -p "$OBS_SCENES_DIR"
 
 # Detect default camera device UUID (exclude OBS Virtual Camera)
-echo "Detecting default camera..."
+echo -e "${BLUE}▶${NC} Detecting default camera..."
 CAMERA_UUID=$(system_profiler SPCameraDataType 2>/dev/null | grep -B5 "Unique ID:" | grep -v "OBS Virtual" | grep "Unique ID:" | head -1 | awk '{print $3}')
 if [ -z "$CAMERA_UUID" ]; then
-    echo "Warning: Could not detect camera. You may need to manually select it in OBS."
+    echo -e "${YELLOW}⚠${NC} Could not detect camera. You may need to manually select it in OBS."
     CAMERA_UUID=""
 else
-    echo "Found camera: $CAMERA_UUID"
+    echo -e "${GREEN}✓${NC} Found camera: ${DIM}$CAMERA_UUID${NC}"
 fi
 
-echo "Creating OBS scene with camera..."
+echo -e "${BLUE}▶${NC} Creating OBS scene with camera..."
 cat > "$OBS_SCENES_DIR/Untitled.json" << EOF
 {
     "current_scene": "Scene",
