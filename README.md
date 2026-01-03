@@ -1,22 +1,28 @@
 # cam-freeze
 
-Freeze your webcam during video calls with a single hotkey. Perfect for stepping away without turning off your camera.
+Freeze your webcam during video calls with a single hotkey. Perfect for stepping away without turning off your camera, secretly vaping during meetings, or any other moment you need privacy without appearing offline.
 
 **Press `Cmd+Shift+F` to freeze. Press again to unfreeze.**
 
-```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│  Your Camera │────▶│  OBS Studio  │────▶│   Virtual    │────▶│  Zoom/Meet   │
-│              │     │              │     │    Camera    │     │   (Browser)  │
-└──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
-                            │
-                     Cmd+Shift+F
-                            │
-                            ▼
-                     ┌──────────────┐
-                     │ Frozen Frame │
-                     │   (Image)    │
-                     └──────────────┘
+```mermaid
+flowchart LR
+    A[Your Camera] -->|Video Stream| B[OBS Studio]
+    B -->|Virtual Camera Output| C[Virtual Camera]
+    C -->|Selected in Application| D[Zoom/Teams<br/>etc.]
+    
+    E[Cmd+Shift+F<br/>Hotkey] -->|Triggers| F[cam-freeze Script]
+    F -->|WebSocket API| B
+    
+    B -.->|Freeze Mode| G[Frozen Frame<br/>Static Image]
+    G -.->|Display| C
+    
+    style A fill:#e1f5ff,color:#000000
+    style B fill:#fff4e1,color:#000000
+    style C fill:#e8f5e9,color:#000000
+    style D fill:#f3e5f5,color:#000000
+    style E fill:#ffebee,color:#000000
+    style F fill:#ffebee,color:#000000
+    style G fill:#ffebee,color:#000000
 ```
 
 ## Features
@@ -25,7 +31,7 @@ Freeze your webcam during video calls with a single hotkey. Perfect for stepping
 - **Zero setup after install** - auto-starts OBS, auto-starts virtual camera, auto-fits camera
 - **Seamless transitions** - no black flashes when switching
 - **Visual indicator** - red "CAM FROZEN" badge appears when frozen
-- **Works everywhere** - Zoom, Google Meet, Teams, or any browser-based video call
+- **Works everywhere** - Compatible with Zoom, Teams, Google Meet, Discord, Slack, Twitch, OBS, and virtually any application that supports camera input. Whether it's a video conferencing app, streaming platform, or browser-based call, cam-freeze works seamlessly.
 
 ## Requirements
 
@@ -38,6 +44,12 @@ Freeze your webcam during video calls with a single hotkey. Perfect for stepping
 git clone https://github.com/Wyatt727/cam-freeze.git
 cd cam-freeze
 ./install.sh
+```
+
+For step-by-step permission setup with guided dialogs:
+
+```bash
+./install.sh --guided
 ```
 
 The installer will:
