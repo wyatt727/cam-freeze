@@ -194,27 +194,27 @@ fi
 
 # Permission check functions
 check_accessibility_permission() {
-    local app_id="$1"
-    # Check system TCC database for accessibility permission
-    # auth_value=2 means granted, auth_value=0 means denied
-    local result=$(sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" \
-        "SELECT auth_value FROM access WHERE service='kTCCServiceAccessibility' AND client='$app_id';" 2>/dev/null)
-    [ "$result" = "2" ]
+    # Use Hammerspoon's own CLI to check accessibility state
+    local hs_cli="/Applications/Hammerspoon.app/Contents/Frameworks/hs/hs"
+    if [ -x "$hs_cli" ]; then
+        local result=$("$hs_cli" -c "hs.accessibilityState()" 2>/dev/null)
+        [ "$result" = "true" ]
+    else
+        return 1  # Can't check, assume not granted
+    fi
 }
 
 check_camera_permission() {
-    local app_id="$1"
-    # Check user TCC database for camera permission
-    local result=$(sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" \
-        "SELECT auth_value FROM access WHERE service='kTCCServiceCamera' AND client='$app_id';" 2>/dev/null)
-    [ "$result" = "2" ]
+    # Camera permissions can't be reliably checked without Full Disk Access
+    # Check if OBS has been launched before (creates preferences on first run)
+    # If prefs exist, OBS has run and would have prompted for camera
+    [ -d "$HOME/Library/Application Support/obs-studio" ] && \
+    [ -f "$HOME/Library/Preferences/com.obsproject.obs-studio.plist" ]
 }
 
 check_system_extension() {
-    # Check if OBS Virtual Camera extension is enabled
-    # This checks if the system extension is loaded
-    systemextensionsctl list 2>/dev/null | grep -q "com.obsproject.obs-studio" && \
-    systemextensionsctl list 2>/dev/null | grep "com.obsproject.obs-studio" | grep -q "enabled"
+    # Check if OBS Virtual Camera extension is activated and enabled
+    systemextensionsctl list 2>/dev/null | grep -q "com.obsproject.obs-studio.mac-camera-extension.*\[activated enabled\]"
 }
 
 prompt_permission() {
