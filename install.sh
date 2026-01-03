@@ -219,21 +219,21 @@ if [ "$GUIDED_MODE" = "true" ]; then
     echo "Step 1/3: Hammerspoon Accessibility"
     open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
     sleep 0.5
-    osascript -e 'tell application "System Settings" to activate'
+    open -a "System Settings"
     osascript -e 'display dialog "Enable Hammerspoon in the Accessibility list.\n\n1. Click the + button (if Hammerspoon not listed)\n2. Find and select Hammerspoon\n3. Enable the checkbox\n\nClick Done when complete." with title "Step 1/3: Accessibility" buttons {"Done"} default button "Done"'
 
     # OBS Camera
     echo "Step 2/3: OBS Camera Permission"
     open "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera"
     sleep 0.5
-    osascript -e 'tell application "System Settings" to activate'
+    open -a "System Settings"
     osascript -e 'display dialog "Enable OBS in the Camera list.\n\n1. Find OBS in the list\n2. Enable the checkbox\n\nIf OBS is not listed, open OBS once first.\n\nClick Done when complete." with title "Step 2/3: Camera" buttons {"Done"} default button "Done"'
 
     # OBS Virtual Camera Extension
     echo "Step 3/3: OBS Virtual Camera Extension"
     open "x-apple.systempreferences:com.apple.LoginItems-Settings.extension"
     sleep 0.5
-    osascript -e 'tell application "System Settings" to activate'
+    open -a "System Settings"
     osascript -e 'display dialog "Enable the OBS Virtual Camera extension.\n\n1. Scroll down to \"Camera Extensions\"\n2. Enable \"OBS Virtual Camera\"\n\nIf not listed, open OBS and click \"Start Virtual Camera\" first.\n\nClick Done when complete." with title "Step 3/3: Camera Extension" buttons {"Done"} default button "Done"'
 
     echo "✓ Guided setup complete"
