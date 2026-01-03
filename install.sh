@@ -1,0 +1,217 @@
+#!/bin/bash
+# OBS Camera Freeze Installer
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+OBS_WS_PASSWORD="U9FeMZxbPH86GPBtftMY"
+
+echo "=== OBS Camera Freeze Installer ==="
+echo
+
+# Check for Homebrew
+if ! command -v brew &> /dev/null; then
+    echo "Installing Homebrew..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
+
+# Install OBS
+if ! [ -d "/Applications/OBS.app" ] && ! command -v obs &> /dev/null; then
+    echo "Installing OBS Studio..."
+    brew install --cask obs
+else
+    echo "OBS Studio already installed"
+fi
+
+# Install Hammerspoon
+if ! [ -d "/Applications/Hammerspoon.app" ]; then
+    echo "Installing Hammerspoon..."
+    brew install --cask hammerspoon
+else
+    echo "Hammerspoon already installed"
+fi
+
+# Install Python websockets
+echo "Installing Python websockets..."
+pip3 install --user websockets -q 2>/dev/null || pip3 install websockets --break-system-packages -q 2>/dev/null || echo "websockets may already be installed"
+
+# Copy cam-freeze script
+echo "Installing cam-freeze script..."
+sudo cp "$SCRIPT_DIR/cam-freeze" /usr/local/bin/cam-freeze
+sudo chmod 755 /usr/local/bin/cam-freeze
+
+# Set up Hammerspoon config
+echo "Setting up Hammerspoon config..."
+mkdir -p ~/.hammerspoon
+cp "$SCRIPT_DIR/hammerspoon-config.lua" ~/.hammerspoon/init.lua
+
+# Configure OBS WebSocket
+echo "Configuring OBS WebSocket..."
+OBS_WS_CONFIG_DIR="$HOME/Library/Application Support/obs-studio/plugin_config/obs-websocket"
+mkdir -p "$OBS_WS_CONFIG_DIR"
+
+cat > "$OBS_WS_CONFIG_DIR/config.json" << EOF
+{
+  "alerts_enabled": false,
+  "auth_required": true,
+  "first_load": false,
+  "server_enabled": true,
+  "server_password": "$OBS_WS_PASSWORD",
+  "server_port": 4455
+}
+EOF
+
+# Create OBS scene with camera
+OBS_SCENES_DIR="$HOME/Library/Application Support/obs-studio/basic/scenes"
+mkdir -p "$OBS_SCENES_DIR"
+
+# Detect default camera device UUID (exclude OBS Virtual Camera)
+echo "Detecting default camera..."
+CAMERA_UUID=$(system_profiler SPCameraDataType 2>/dev/null | grep -B5 "Unique ID:" | grep -v "OBS Virtual" | grep "Unique ID:" | head -1 | awk '{print $3}')
+if [ -z "$CAMERA_UUID" ]; then
+    echo "Warning: Could not detect camera. You may need to manually select it in OBS."
+    CAMERA_UUID=""
+else
+    echo "Found camera: $CAMERA_UUID"
+fi
+
+echo "Creating OBS scene with camera..."
+cat > "$OBS_SCENES_DIR/Untitled.json" << EOF
+{
+    "current_scene": "Scene",
+    "current_program_scene": "Scene",
+    "scene_order": [{"name": "Scene"}],
+    "name": "Untitled",
+    "sources": [
+        {
+            "name": "Scene",
+            "uuid": "scene-uuid-001",
+            "id": "scene",
+            "versioned_id": "scene",
+            "settings": {
+                "id_counter": 1,
+                "custom_size": false,
+                "items": [
+                    {
+                        "name": "Video Capture Device",
+                        "source_uuid": "camera-uuid-001",
+                        "visible": true,
+                        "locked": false,
+                        "rot": 0.0,
+                        "pos": {"x": 0.0, "y": 0.0},
+                        "scale": {"x": 1.5, "y": 1.5},
+                        "align": 5,
+                        "bounds_type": 0,
+                        "bounds_align": 0,
+                        "crop_left": 0,
+                        "crop_top": 0,
+                        "crop_right": 0,
+                        "crop_bottom": 0,
+                        "id": 1,
+                        "group_item_backup": false
+                    }
+                ]
+            },
+            "mixers": 0,
+            "enabled": true
+        },
+        {
+            "name": "Video Capture Device",
+            "uuid": "camera-uuid-001",
+            "id": "macos-avcapture",
+            "versioned_id": "macos-avcapture",
+            "settings": {
+                "device": "$CAMERA_UUID",
+                "use_preset": true,
+                "preset": "AVCaptureSessionPreset1280x720"
+            },
+            "mixers": 255,
+            "enabled": true,
+            "muted": false
+        }
+    ],
+    "groups": [],
+    "transitions": [],
+    "virtual-camera": {"type2": 4}
+}
+EOF
+
+# Install OBS MCP server for Claude Code
+if command -v npx &> /dev/null; then
+    echo "Installing OBS MCP server for Claude Code..."
+
+    # Configure Claude settings with MCP server
+    CLAUDE_SETTINGS="$HOME/.claude/settings.json"
+    mkdir -p "$HOME/.claude"
+
+    if [ -f "$CLAUDE_SETTINGS" ]; then
+        # Update existing settings
+        python3 << PYEOF
+import json
+import os
+
+settings_path = os.path.expanduser("~/.claude/settings.json")
+with open(settings_path, 'r') as f:
+    settings = json.load(f)
+
+if 'mcpServers' not in settings:
+    settings['mcpServers'] = {}
+
+settings['mcpServers']['obs-mcp'] = {
+    "command": "npx",
+    "args": ["-y", "obs-mcp"],
+    "env": {
+        "OBS_WEBSOCKET_PASSWORD": "$OBS_WS_PASSWORD"
+    }
+}
+
+with open(settings_path, 'w') as f:
+    json.dump(settings, f, indent=2)
+
+print("Claude MCP settings updated with OBS server")
+PYEOF
+    else
+        # Create new settings
+        cat > "$CLAUDE_SETTINGS" << JSONEOF
+{
+  "mcpServers": {
+    "obs-mcp": {
+      "command": "npx",
+      "args": ["-y", "obs-mcp"],
+      "env": {
+        "OBS_WEBSOCKET_PASSWORD": "$OBS_WS_PASSWORD"
+      }
+    }
+  }
+}
+JSONEOF
+        echo "Created Claude settings with OBS MCP server"
+    fi
+else
+    echo "npx not found - skipping Claude MCP installation"
+    echo "To install manually: npx @anthropic-ai/claude-code mcp add obs-mcp -- npx -y obs-mcp"
+fi
+
+# Restart Hammerspoon
+echo "Restarting Hammerspoon..."
+killall Hammerspoon 2>/dev/null || true
+sleep 1
+open -a Hammerspoon
+
+echo
+echo "=== Installation Complete ==="
+echo
+echo "Next steps:"
+echo "1. Grant permissions in System Settings:"
+echo "   - Privacy & Security → Accessibility → Enable Hammerspoon"
+echo "   - Privacy & Security → Camera → Enable OBS"
+echo "   - General → Login Items → Camera Extensions → Enable OBS"
+echo
+echo "2. Open OBS and click 'Start Virtual Camera' (bottom right)"
+echo "   - A scene with your default camera is already configured"
+echo
+echo "3. In Zoom/Meet, select 'OBS Virtual Camera' as your camera"
+echo
+echo "4. Press Cmd+Shift+F to freeze/unfreeze!"
+echo
+echo "WebSocket Password: $OBS_WS_PASSWORD"

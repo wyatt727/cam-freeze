@@ -1,0 +1,257 @@
+#!/bin/bash
+# Toggle OBS camera freeze - auto-starts OBS if needed
+# Screenshots the entire scene output for perfect matching
+
+python3 << 'EOF'
+import asyncio, json, hashlib, base64, os, sys, subprocess, time
+
+try:
+    import websockets
+except ImportError:
+    subprocess.run(['pip3', 'install', '--user', 'websockets', '-q'])
+    import websockets
+
+STATE_FILE = "/tmp/cam_freeze_state"
+SNAPSHOT_PATH = "/tmp/obs_frozen_frame.png"
+PASSWORD = "U9FeMZxbPH86GPBtftMY"
+
+def is_obs_running():
+    result = subprocess.run(['pgrep', '-x', 'OBS'], capture_output=True)
+    return result.returncode == 0
+
+def start_obs():
+    subprocess.run(['open', '-a', 'OBS'])
+
+async def wait_for_websocket(timeout=15):
+    start = time.time()
+    while time.time() - start < timeout:
+        try:
+            async with websockets.connect("ws://localhost:4455", close_timeout=1) as ws:
+                await ws.recv()
+                return True
+        except:
+            await asyncio.sleep(0.5)
+    return False
+
+async def connect_and_auth():
+    ws = await websockets.connect("ws://localhost:4455")
+    hello = json.loads(await ws.recv())
+    auth_data = hello["d"]["authentication"]
+    secret = base64.b64encode(hashlib.sha256((PASSWORD + auth_data["salt"]).encode()).digest()).decode()
+    auth_str = base64.b64encode(hashlib.sha256((secret + auth_data["challenge"]).encode()).digest()).decode()
+    await ws.send(json.dumps({"op": 1, "d": {"rpcVersion": 1, "authentication": auth_str, "eventSubscriptions": 0}}))
+    await ws.recv()
+    return ws
+
+async def ensure_virtual_cam(ws):
+    await ws.send(json.dumps({"op": 6, "d": {"requestType": "GetVirtualCamStatus", "requestId": "vcam", "requestData": {}}}))
+    resp = json.loads(await ws.recv())
+    if not resp.get("d", {}).get("responseData", {}).get("outputActive"):
+        await ws.send(json.dumps({"op": 6, "d": {"requestType": "StartVirtualCam", "requestId": "start", "requestData": {}}}))
+        await ws.recv()
+
+async def fix_camera_transform(ws, canvas_w, canvas_h):
+    """Auto-fit camera to canvas"""
+    await ws.send(json.dumps({"op": 6, "d": {"requestType": "GetSceneItemId", "requestId": "cid", "requestData": {"sceneName": "Scene", "sourceName": "Video Capture Device"}}}))
+    resp = json.loads(await ws.recv())
+    cam_id = resp.get("d", {}).get("responseData", {}).get("sceneItemId")
+    if not cam_id:
+        return
+
+    # Get source dimensions
+    await ws.send(json.dumps({"op": 6, "d": {"requestType": "GetSceneItemTransform", "requestId": "gt", "requestData": {"sceneName": "Scene", "sceneItemId": cam_id}}}))
+    resp = json.loads(await ws.recv())
+    t = resp.get("d", {}).get("responseData", {}).get("sceneItemTransform", {})
+    src_w = t.get("sourceWidth", 0) or 1280
+    src_h = t.get("sourceHeight", 0) or 720
+
+    # Skip if dimensions not ready
+    if src_w == 0 or src_h == 0:
+        return
+
+    # Calculate scale to fit canvas
+    scale = min(canvas_w / src_w, canvas_h / src_h)
+    final_w = src_w * scale
+    final_h = src_h * scale
+    pos_x = (canvas_w - final_w) / 2
+    pos_y = (canvas_h - final_h) / 2
+
+    # Apply transform
+    await ws.send(json.dumps({"op": 6, "d": {
+        "requestType": "SetSceneItemTransform",
+        "requestId": "fix",
+        "requestData": {
+            "sceneName": "Scene",
+            "sceneItemId": cam_id,
+            "sceneItemTransform": {
+                "positionX": pos_x,
+                "positionY": pos_y,
+                "scaleX": scale,
+                "scaleY": scale,
+                "rotation": 0.0,
+                "cropLeft": 0,
+                "cropRight": 0,
+                "cropTop": 0,
+                "cropBottom": 0,
+                "boundsType": "OBS_BOUNDS_NONE"
+            }
+        }
+    }}))
+    await ws.recv()
+
+async def toggle():
+    # Auto-start OBS if needed
+    if not is_obs_running():
+        start_obs()
+        if not await wait_for_websocket(15):
+            print("ERR: OBS failed to start")
+            sys.exit(1)
+        await asyncio.sleep(3)  # Wait for camera to initialize
+
+    # Read current state
+    try:
+        with open(STATE_FILE) as f:
+            frozen = f.read().strip() == "1"
+    except:
+        frozen = False
+
+    new_state = not frozen
+
+    try:
+        ws = await connect_and_auth()
+    except Exception as e:
+        print(f"ERR: Cannot connect to OBS - {e}")
+        sys.exit(1)
+
+    await ensure_virtual_cam(ws)
+
+    # Get canvas size
+    await ws.send(json.dumps({"op": 6, "d": {"requestType": "GetVideoSettings", "requestId": "vid", "requestData": {}}}))
+    resp = json.loads(await ws.recv())
+    canvas_w = resp.get("d", {}).get("responseData", {}).get("baseWidth", 1920)
+    canvas_h = resp.get("d", {}).get("responseData", {}).get("baseHeight", 1080)
+
+    # Auto-fit camera to canvas
+    await fix_camera_transform(ws, canvas_w, canvas_h)
+
+    if new_state:  # Freeze
+        # Screenshot the SCENE (captures exactly what's output, including camera position/size)
+        await ws.send(json.dumps({"op": 6, "d": {
+            "requestType": "SaveSourceScreenshot",
+            "requestId": "snap",
+            "requestData": {
+                "sourceName": "Scene",
+                "imageFormat": "png",
+                "imageFilePath": SNAPSHOT_PATH,
+                "imageWidth": canvas_w,
+                "imageHeight": canvas_h
+            }
+        }}))
+        resp = json.loads(await ws.recv())
+
+        if not resp.get("d", {}).get("requestStatus", {}).get("result"):
+            print("ERR: Failed to capture frame")
+            await ws.close()
+            sys.exit(1)
+
+        # Check if frozen image source exists
+        await ws.send(json.dumps({"op": 6, "d": {
+            "requestType": "GetInputSettings",
+            "requestId": "check",
+            "requestData": {"inputName": "Frozen Frame"}
+        }}))
+        resp = json.loads(await ws.recv())
+
+        if not resp.get("d", {}).get("requestStatus", {}).get("result"):
+            # Create the image source at 0,0 covering full canvas
+            await ws.send(json.dumps({"op": 6, "d": {
+                "requestType": "CreateInput",
+                "requestId": "create",
+                "requestData": {
+                    "sceneName": "Scene",
+                    "inputName": "Frozen Frame",
+                    "inputKind": "image_source",
+                    "inputSettings": {"file": SNAPSHOT_PATH},
+                    "sceneItemEnabled": False
+                }
+            }}))
+            await ws.recv()
+
+            # Position at 0,0 with scale 1
+            await ws.send(json.dumps({"op": 6, "d": {
+                "requestType": "GetSceneItemId",
+                "requestId": "fid",
+                "requestData": {"sceneName": "Scene", "sourceName": "Frozen Frame"}
+            }}))
+            resp = json.loads(await ws.recv())
+            fid = resp.get("d", {}).get("responseData", {}).get("sceneItemId")
+
+            if fid:
+                await ws.send(json.dumps({"op": 6, "d": {
+                    "requestType": "SetSceneItemTransform",
+                    "requestId": "pos",
+                    "requestData": {
+                        "sceneName": "Scene",
+                        "sceneItemId": fid,
+                        "sceneItemTransform": {"positionX": 0, "positionY": 0, "scaleX": 1.0, "scaleY": 1.0}
+                    }
+                }}))
+                await ws.recv()
+        else:
+            # Update existing source
+            await ws.send(json.dumps({"op": 6, "d": {
+                "requestType": "SetInputSettings",
+                "requestId": "update",
+                "requestData": {"inputName": "Frozen Frame", "inputSettings": {"file": SNAPSHOT_PATH}}
+            }}))
+            await ws.recv()
+
+        # Get IDs
+        await ws.send(json.dumps({"op": 6, "d": {"requestType": "GetSceneItemId", "requestId": "cid", "requestData": {"sceneName": "Scene", "sourceName": "Video Capture Device"}}}))
+        cam_id = json.loads(await ws.recv()).get("d", {}).get("responseData", {}).get("sceneItemId")
+
+        await ws.send(json.dumps({"op": 6, "d": {"requestType": "GetSceneItemId", "requestId": "fid", "requestData": {"sceneName": "Scene", "sourceName": "Frozen Frame"}}}))
+        frozen_id = json.loads(await ws.recv()).get("d", {}).get("responseData", {}).get("sceneItemId")
+
+        # Show frozen frame FIRST (on top)
+        if frozen_id:
+            await ws.send(json.dumps({"op": 6, "d": {"requestType": "SetSceneItemEnabled", "requestId": "s1", "requestData": {"sceneName": "Scene", "sceneItemId": frozen_id, "sceneItemEnabled": True}}}))
+            await ws.recv()
+
+        await asyncio.sleep(0.05)
+
+        # Then hide camera
+        if cam_id:
+            await ws.send(json.dumps({"op": 6, "d": {"requestType": "SetSceneItemEnabled", "requestId": "s2", "requestData": {"sceneName": "Scene", "sceneItemId": cam_id, "sceneItemEnabled": False}}}))
+            await ws.recv()
+
+        print("🔴 FROZEN")
+
+    else:  # Unfreeze
+        await ws.send(json.dumps({"op": 6, "d": {"requestType": "GetSceneItemId", "requestId": "cid", "requestData": {"sceneName": "Scene", "sourceName": "Video Capture Device"}}}))
+        cam_id = json.loads(await ws.recv()).get("d", {}).get("responseData", {}).get("sceneItemId")
+
+        await ws.send(json.dumps({"op": 6, "d": {"requestType": "GetSceneItemId", "requestId": "fid", "requestData": {"sceneName": "Scene", "sourceName": "Frozen Frame"}}}))
+        frozen_id = json.loads(await ws.recv()).get("d", {}).get("responseData", {}).get("sceneItemId")
+
+        # Show camera FIRST (underneath)
+        if cam_id:
+            await ws.send(json.dumps({"op": 6, "d": {"requestType": "SetSceneItemEnabled", "requestId": "s1", "requestData": {"sceneName": "Scene", "sceneItemId": cam_id, "sceneItemEnabled": True}}}))
+            await ws.recv()
+
+        await asyncio.sleep(0.05)
+
+        # Then hide frozen frame
+        if frozen_id:
+            await ws.send(json.dumps({"op": 6, "d": {"requestType": "SetSceneItemEnabled", "requestId": "s2", "requestData": {"sceneName": "Scene", "sceneItemId": frozen_id, "sceneItemEnabled": False}}}))
+            await ws.recv()
+
+        print("🟢 LIVE")
+
+    await ws.close()
+
+    with open(STATE_FILE, "w") as f:
+        f.write("1" if new_state else "0")
+
+asyncio.run(toggle())
+EOF
