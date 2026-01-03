@@ -216,7 +216,7 @@ else
 fi
 
 # Restart Hammerspoon
-echo "Restarting Hammerspoon..."
+echo -e "${BLUE}▶${NC} Restarting Hammerspoon..."
 killall Hammerspoon 2>/dev/null || true
 sleep 1
 open -a Hammerspoon
@@ -224,48 +224,52 @@ open -a Hammerspoon
 # Guided permission setup (only with --guided flag)
 if [ "$GUIDED_MODE" = "true" ]; then
     echo
-    echo "=== Guided Permission Setup ==="
+    echo -e "${BOLD}${MAGENTA}  ┌─────────────────────────────────────┐${NC}"
+    echo -e "${BOLD}${MAGENTA}  │     Guided Permission Setup         │${NC}"
+    echo -e "${BOLD}${MAGENTA}  └─────────────────────────────────────┘${NC}"
     echo
 
     # Hammerspoon Accessibility
-    echo "Step 1/3: Hammerspoon Accessibility"
+    echo -e "${CYAN}[1/3]${NC} Hammerspoon Accessibility"
     open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
     sleep 0.5
     open -a "System Settings"
     osascript -e 'display dialog "Enable Hammerspoon in the Accessibility list.\n\n1. Click the + button (if Hammerspoon not listed)\n2. Find and select Hammerspoon\n3. Enable the checkbox\n\nClick Done when complete." with title "Step 1/3: Accessibility" buttons {"Done"} default button "Done"'
 
     # OBS Camera
-    echo "Step 2/3: OBS Camera Permission"
+    echo -e "${CYAN}[2/3]${NC} OBS Camera Permission"
     open "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera"
     sleep 0.5
     open -a "System Settings"
     osascript -e 'display dialog "Enable OBS in the Camera list.\n\n1. Find OBS in the list\n2. Enable the checkbox\n\nIf OBS is not listed, open OBS once first.\n\nClick Done when complete." with title "Step 2/3: Camera" buttons {"Done"} default button "Done"'
 
     # OBS Virtual Camera Extension
-    echo "Step 3/3: OBS Virtual Camera Extension"
+    echo -e "${CYAN}[3/3]${NC} OBS Virtual Camera Extension"
     open "x-apple.systempreferences:com.apple.LoginItems-Settings.extension"
     sleep 0.5
     open -a "System Settings"
     osascript -e 'display dialog "Enable the OBS Virtual Camera extension.\n\n1. Scroll down to \"Camera Extensions\"\n2. Enable \"OBS Virtual Camera\"\n\nIf not listed, open OBS and click \"Start Virtual Camera\" first.\n\nClick Done when complete." with title "Step 3/3: Camera Extension" buttons {"Done"} default button "Done"'
 
-    echo "✓ Guided setup complete"
+    echo -e "${GREEN}✓${NC} Guided setup complete"
 fi
 
 echo
-echo "=== Installation Complete ==="
+echo -e "${BOLD}${GREEN}  ╔═══════════════════════════════════════╗${NC}"
+echo -e "${BOLD}${GREEN}  ║        ✅ Installation Complete       ║${NC}"
+echo -e "${BOLD}${GREEN}  ╚═══════════════════════════════════════╝${NC}"
 echo
 
 if [ "$GUIDED_MODE" = "false" ]; then
-    echo "Grant permissions in System Settings:"
-    echo "  - Privacy & Security → Accessibility → Enable Hammerspoon"
-    echo "  - Privacy & Security → Camera → Enable OBS"
-    echo "  - General → Login Items → Camera Extensions → Enable OBS"
+    echo -e "${YELLOW}Grant permissions in System Settings:${NC}"
+    echo -e "  ${DIM}•${NC} Privacy & Security → Accessibility → Enable Hammerspoon"
+    echo -e "  ${DIM}•${NC} Privacy & Security → Camera → Enable OBS"
+    echo -e "  ${DIM}•${NC} General → Login Items → Camera Extensions → Enable OBS"
     echo
-    echo "(Run './install.sh --guided' for step-by-step permission setup)"
+    echo -e "${DIM}(Run './install.sh --guided' for step-by-step setup)${NC}"
     echo
 fi
-echo "Don't forget to select 'OBS Virtual Camera' in your video app (Zoom, Meet, etc.)"
+echo -e "${CYAN}Don't forget to select 'OBS Virtual Camera' in your video app!${NC}"
 echo
-echo "Press Cmd+Shift+F to freeze/unfreeze!"
+echo -e "${BOLD}Press ${GREEN}Cmd+Shift+F${NC}${BOLD} to freeze/unfreeze!${NC}"
 echo
-echo "WebSocket Password: $OBS_WS_PASSWORD"
+echo -e "${DIM}WebSocket Password: $OBS_WS_PASSWORD${NC}"
