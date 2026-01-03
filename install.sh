@@ -192,83 +192,34 @@ else
     echo "To install manually: npx @anthropic-ai/claude-code mcp add obs-mcp -- npx -y obs-mcp"
 fi
 
-# Permission check functions
-check_accessibility_permission() {
-    # Use Hammerspoon's own CLI to check accessibility state
-    # Requires IPC module to be loaded (added to config)
-    local hs_cli="/Applications/Hammerspoon.app/Contents/Frameworks/hs/hs"
-    if [ -x "$hs_cli" ]; then
-        local result=$("$hs_cli" -c "hs.accessibilityState()" 2>/dev/null)
-        [ "$result" = "true" ]
-    else
-        return 1  # Can't check, assume not granted
-    fi
-}
-
-check_camera_permission() {
-    # Camera permissions can't be reliably checked without Full Disk Access
-    # Check if OBS config exists - if so, OBS has run and would have prompted for camera
-    # This is a heuristic; if user denied, they'll need to manually enable anyway
-    [ -d "$HOME/Library/Application Support/obs-studio/basic" ]
-}
-
-check_system_extension() {
-    # Check if OBS Virtual Camera extension is activated and enabled
-    systemextensionsctl list 2>/dev/null | grep -q "com.obsproject.obs-studio.mac-camera-extension.*\[activated enabled\]"
-}
-
-prompt_permission() {
-    local title="$1"
-    local message="$2"
-    local settings_url="$3"
-
-    # Open the relevant System Settings pane
-    open "$settings_url"
-
-    # Show dialog to guide user
-    osascript -e "display dialog \"$message\" with title \"$title\" buttons {\"Done\"} default button \"Done\""
-}
-
-# Restart Hammerspoon (with IPC module for CLI access)
+# Restart Hammerspoon
 echo "Restarting Hammerspoon..."
 killall Hammerspoon 2>/dev/null || true
 sleep 1
 open -a Hammerspoon
-# Wait for Hammerspoon to fully start and load IPC module
-sleep 2
 
-echo
-echo "=== Checking Permissions ==="
-echo
+# Guided permission setup (only with --guided flag)
+if [ "$GUIDED_MODE" = "true" ]; then
+    echo
+    echo "=== Guided Permission Setup ==="
+    echo
 
-# Check and prompt for Hammerspoon Accessibility
-if ! check_accessibility_permission "org.hammerspoon.Hammerspoon"; then
-    echo "Hammerspoon needs Accessibility permission..."
-    prompt_permission "Accessibility Permission Required" \
-        "Please enable Hammerspoon in the Accessibility list.\n\n1. Click the + button\n2. Find and select Hammerspoon\n3. Enable the checkbox\n\nClick Done when complete." \
-        "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-else
-    echo "✓ Hammerspoon already has Accessibility permission"
-fi
+    # Hammerspoon Accessibility
+    echo "Step 1/3: Hammerspoon Accessibility"
+    open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+    osascript -e 'display dialog "Please enable Hammerspoon in the Accessibility list.\n\n1. Click the + button (if Hammerspoon not listed)\n2. Find and select Hammerspoon\n3. Enable the checkbox\n\nClick Done when complete." with title "Accessibility Permission" buttons {"Done"} default button "Done"'
 
-# Check and prompt for OBS Camera
-if ! check_camera_permission "com.obsproject.obs-studio"; then
-    echo "OBS needs Camera permission..."
-    prompt_permission "Camera Permission Required" \
-        "Please enable OBS in the Camera list.\n\n1. Find OBS in the list\n2. Enable the checkbox\n\nIf OBS is not listed, open OBS once and it will request permission.\n\nClick Done when complete." \
-        "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera"
-else
-    echo "✓ OBS already has Camera permission"
-fi
+    # OBS Camera
+    echo "Step 2/3: OBS Camera Permission"
+    open "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera"
+    osascript -e 'display dialog "Please enable OBS in the Camera list.\n\n1. Find OBS in the list\n2. Enable the checkbox\n\nIf OBS is not listed, open OBS once first - it will request permission.\n\nClick Done when complete." with title "Camera Permission" buttons {"Done"} default button "Done"'
 
-# Check and prompt for OBS Virtual Camera extension
-if ! check_system_extension; then
-    echo "OBS Virtual Camera extension needs to be enabled..."
-    prompt_permission "Camera Extension Required" \
-        "Please enable the OBS Virtual Camera extension.\n\n1. Scroll down to 'Camera Extensions'\n2. Enable 'OBS Virtual Camera'\n\nIf not listed, open OBS and click 'Start Virtual Camera' first.\n\nClick Done when complete." \
-        "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Login%20Items"
-else
-    echo "✓ OBS Virtual Camera extension already enabled"
+    # OBS Virtual Camera Extension
+    echo "Step 3/3: OBS Virtual Camera Extension"
+    open "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Login%20Items"
+    osascript -e 'display dialog "Please enable the OBS Virtual Camera extension.\n\n1. Scroll down to \"Camera Extensions\"\n2. Enable \"OBS Virtual Camera\"\n\nIf not listed, open OBS and click \"Start Virtual Camera\" first.\n\nClick Done when complete." with title "Camera Extension" buttons {"Done"} default button "Done"'
+
+    echo "✓ Guided setup complete"
 fi
 
 echo
