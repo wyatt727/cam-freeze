@@ -244,9 +244,9 @@ if [ "$GUIDED_MODE" = "false" ]; then
     echo "  - General → Login Items → Camera Extensions → Enable OBS"
     echo
     echo "(Run './install.sh --guided' for step-by-step permission setup)"
-else
-    echo "In Zoom/Meet, select 'OBS Virtual Camera' as your camera."
+    echo
 fi
+echo "Don't forget to select 'OBS Virtual Camera' in your video app (Zoom, Meet, etc.)"
 echo
 echo "Press Cmd+Shift+F to freeze/unfreeze!"
 echo
