@@ -5,6 +5,17 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 OBS_WS_PASSWORD="U9FeMZxbPH86GPBtftMY"
+GUIDED_MODE="false"
+
+# Parse flags
+for arg in "$@"; do
+    case $arg in
+        --guided)
+            GUIDED_MODE="true"
+            shift
+            ;;
+    esac
+done
 
 echo "=== OBS Camera Freeze Installer ==="
 echo
