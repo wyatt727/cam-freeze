@@ -238,28 +238,16 @@ echo "=== Installation Complete ==="
 echo
 
 if [ "$GUIDED_MODE" = "false" ]; then
-    echo "Next steps:"
-    echo "1. Grant permissions in System Settings:"
-    echo "   - Privacy & Security → Accessibility → Enable Hammerspoon"
-    echo "   - Privacy & Security → Camera → Enable OBS"
-    echo "   - General → Login Items → Camera Extensions → Enable OBS"
+    echo "Grant permissions in System Settings:"
+    echo "  - Privacy & Security → Accessibility → Enable Hammerspoon"
+    echo "  - Privacy & Security → Camera → Enable OBS"
+    echo "  - General → Login Items → Camera Extensions → Enable OBS"
     echo
-    echo "   (Run './install.sh --guided' for step-by-step permission setup)"
-    echo
-    echo "2. Open OBS and click 'Start Virtual Camera' (bottom right)"
-    echo "   - A scene with your default camera is already configured"
-    echo
-    echo "3. In Zoom/Meet, select 'OBS Virtual Camera' as your camera"
-    echo
-    echo "4. Press Cmd+Shift+F to freeze/unfreeze!"
+    echo "(Run './install.sh --guided' for step-by-step permission setup)"
 else
-    echo "Next steps:"
-    echo "1. Open OBS and click 'Start Virtual Camera' (bottom right)"
-    echo "   - A scene with your default camera is already configured"
-    echo
-    echo "2. In Zoom/Meet, select 'OBS Virtual Camera' as your camera"
-    echo
-    echo "3. Press Cmd+Shift+F to freeze/unfreeze!"
+    echo "In Zoom/Meet, select 'OBS Virtual Camera' as your camera."
 fi
+echo
+echo "Press Cmd+Shift+F to freeze/unfreeze!"
 echo
 echo "WebSocket Password: $OBS_WS_PASSWORD"
