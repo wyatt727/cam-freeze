@@ -161,9 +161,9 @@ cat > "$OBS_SCENES_DIR/Untitled.json" << EOF
 }
 EOF
 
-# Install OBS MCP server for Claude Code
+# Install OBS MCP server for Claude Code (optional)
 if command -v npx &> /dev/null; then
-    echo -e "${BLUE}▶${NC} Installing OBS MCP server for Claude Code..."
+    echo -e "${BLUE}▶${NC} Configuring Claude Code integration..."
 
     # Configure Claude settings with MCP server
     CLAUDE_SETTINGS="$HOME/.claude/settings.json"
